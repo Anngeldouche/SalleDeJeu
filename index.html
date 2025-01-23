@@ -1,63 +1,90 @@
 <!DOCTYPE html>
-<html>
-  <head>
+<html lang="fr">
+<head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="pluginAssets/highlight.js/atom-one-light.css">
-    <title>The ReuNews Blog </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dessin en ligne</title>
     <style>
-      /* Import de la police Chomsky depuis le fichier local */
-      @font-face {
-        font-family: 'Chomsky';
-        src: url('https://github.com/Anngeldouche/TheRuNewsBlog/blob/Anngeldouche-patch-1/chomsky/Chomsky.woff') format('woff');
-      }
-
-      /* Appliquer la police Chomsky au titre */
-      .exported-note-title {
-        font-family: 'Chomsky', sans-serif;
-      }
-
-      /* Autres styles de la page */
-      body {
-        font-size: 15px;
-        color: #32373F;
-        word-wrap: break-word;
-        line-height: 1.6em;
-        background-color: #ffffff;
-        font-family: 'Avenir Next', 'Avenir', 'Arial', sans-serif;
-        padding-bottom: 0px;
-        padding-top: 0px;
-      }
-
-      .exported-note-title {
-        font-size: 2em;
-        font-weight: bold;
-        margin-bottom: 0.8em;
-        line-height: 1.5em;
-        padding-bottom: .35em;
-        border-bottom: 1px solid #dddddd;
-      }
-
-      a {
-        color: #155BDA;
-      }
-
-      ul, ol {
-        padding-left: 0;
-        margin-left: 1.7em;
-      }
-
-      li {
-        margin-bottom: .4em;
-      }
+        body {
+            background-color: #FFA500; /* Fond orange clair */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            height: 100vh;
+        }
+        canvas {
+            border: 2px solid black;
+        }
+        #sendBtn {
+            margin-bottom: 20px;
+        }
     </style>
-  </head>
-  <body>
-    <div class="exported-note">
-      <div class="exported-note-title">The ReuNews Blog </div>
-
-      <!-- Votre code iframe ajouté ici -->
-      <iframe scrolling="no" width="334" height="175" frameborder="0" marginwidth="0" marginheight="0" src="https://www.meteo.be/services/widget/.?postcode=7000&nbDay=2&type=4&lang=fr&bgImageId=0&bgColor=f4bef9&scrolChoice=0&colorTempMax=ffffff&colorTempMin=f9e1e4"></iframe>
+</head>
+<body>
+    <div>
+        <canvas id="drawingCanvas" width="500" height="300"></canvas><br>
+        <button id="sendBtn">Envoyer le dessin</button>
     </div>
-  </body>
+
+    <script>
+        // Initialisation du canvas
+        const canvas = document.getElementById("drawingCanvas");
+        const ctx = canvas.getContext("2d");
+        let drawing = false;
+
+        // Fonction pour commencer à dessiner
+        canvas.addEventListener("mousedown", (e) => {
+            drawing = true;
+            ctx.moveTo(e.offsetX, e.offsetY);
+        });
+
+        // Fonction pour dessiner
+        canvas.addEventListener("mousemove", (e) => {
+            if (drawing) {
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+            }
+        });
+
+        // Fonction pour arrêter de dessiner
+        canvas.addEventListener("mouseup", () => {
+            drawing = false;
+            ctx.beginPath();
+        });
+
+        // Fonction pour envoyer le dessin
+        document.getElementById("sendBtn").addEventListener("click", () => {
+            const imageData = canvas.toDataURL("image/png"); // Capture le dessin en tant qu'image
+            sendDrawingToServer(imageData);
+        });
+
+        // Fonction pour envoyer le dessin au serveur
+        function sendDrawingToServer(imageData) {
+            fetch("/saveDrawing", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ drawing: imageData }),
+            });
+        }
+
+        // Polling : Vérification régulière des nouveaux dessins (toutes les 5 secondes)
+        setInterval(() => {
+            fetch("/getDrawings")
+                .then(response => response.json())
+                .then(data => {
+                    data.drawings.forEach(drawing => {
+                        const img = new Image();
+                        img.onload = function () {
+                            ctx.drawImage(img, 0, 0);
+                        };
+                        img.src = drawing;
+                    });
+                });
+        }, 5000);
+    </script>
+</body>
 </html>
